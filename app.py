@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request,redirect,flash
+from flask import Flask, render_template, request,redirect,flash,session
 from flask_debugtoolbar import DebugToolbarExtension
 from surveys import s_survey 
 
@@ -8,7 +8,7 @@ app.config["SECRET_KEY"] = "fishpaste453"
 debug = DebugToolbarExtension(app)
 app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 
-RESPONSES = []
+RESPONSES = "responses"
 
 @app.route('/')
 def survey_home():
@@ -18,21 +18,24 @@ def survey_home():
 @app.route('/start')
 def survey_start():
    """Begin survey"""
+
+   session["RESPONSES"] = []
    return redirect("/questions/0")
 
 @app.route('/questions/<int:qid>')
 def show_question(qid):
    """Display questions"""
+   responses = session.get(RESPONSES)
    
-   if RESPONSES is None:
+   if responses is None:
       return redirect ("/")
    
-   if (len(RESPONSES) == len(s_survey.questions)):
+   if (len(responses) == len(s_survey.questions)):
       return redirect("/completed")
    
-   if (len(RESPONSES)) != qid:
+   if (len(responses)) != qid:
       flash(f"Invalid question id: {qid}")
-      return redirect(f"/questions/{len(RESPONSES)}")
+      return redirect(f"/questions/{len(responses)}")
    
    question = s_survey.questions[qid]
   
@@ -44,14 +47,15 @@ def show_question(qid):
 def question_response():
    """Get answers and continue survey"""
    choice = request.form["answer"]
-
+   responses = session["RESPONSES"]
    RESPONSES.append(choice)
+   session["RESPONSES"] = responses
 
-   if (len(RESPONSES) == len(s_survey.questions)):
+   if (len(responses) == len(s_survey.questions)):
       return redirect("/complete")
    
    else:
-     return redirect(f"/questions/{len(RESPONSES)}")
+     return redirect(f"/questions/{len(responses)}")
    
 
 @app.route("/completed")
